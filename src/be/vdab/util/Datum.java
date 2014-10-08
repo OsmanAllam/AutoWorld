@@ -6,6 +6,10 @@
 package be.vdab.util;
 
 import java.io.Serializable;
+import java.time.DateTimeException;
+import static java.time.LocalDate.of;
+import java.time.LocalDate;
+
 
 /**
  *
@@ -16,10 +20,21 @@ public class Datum implements Serializable, Comparable<Datum> {
     private final int maand;
     private final int jaar;
     
+    private final String _asString;
+
+    
     public Datum(int dag, int maand, int jaar) throws DatumException {
         if ((jaar < 1583) || (jaar > 4099))
             throw new DatumException();
         
+        // Verify date 
+        try {
+            final LocalDate d = LocalDate.of(jaar, maand, dag);
+        } catch (DateTimeException e) {
+            throw new DatumException(e);
+        }
+        
+        this._asString = String.format("%02d/%02d/%4d", dag, maand, jaar);
         this.dag = dag;
         this.maand = maand;
         this.jaar = jaar;
@@ -39,7 +54,7 @@ public class Datum implements Serializable, Comparable<Datum> {
 
     @Override
     public String toString() {
-        return String.format("%02d/%02d/%4d", this.dag, this.maand, this.jaar);
+        return this._asString;
     }
 
     @Override
@@ -60,13 +75,10 @@ public class Datum implements Serializable, Comparable<Datum> {
             return false;
         }
         final Datum other = (Datum) obj;
-        if (this.dag != other.dag) {
-            return false;
-        }
-        if (this.maand != other.maand) {
-            return false;
-        }
-        return this.jaar == other.jaar;
+        
+        return ((this.dag == other.dag) &&
+                (this.maand == other.maand) &&
+                (this.jaar == other.jaar));
     }
 
     @Override

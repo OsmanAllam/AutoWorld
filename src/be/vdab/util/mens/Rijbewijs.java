@@ -10,8 +10,7 @@ package be.vdab.util.mens;
  * @author osman.allam
  */
 public enum Rijbewijs {
-    A, B, C, D, 
-    BE, CE, DE;
+    A, B, BE, C, CE, D, DE;
 
     @Override
     public String toString() {

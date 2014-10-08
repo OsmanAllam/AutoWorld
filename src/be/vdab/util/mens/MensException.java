@@ -9,7 +9,7 @@ package be.vdab.util.mens;
  *
  * @author osman.allam
  */
-public class MensException extends Exception {
+public class MensException extends RuntimeException {
     public MensException() {
         super();
     }

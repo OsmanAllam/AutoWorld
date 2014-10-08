@@ -21,7 +21,7 @@ public class DIV {
         return instance;
     }
     
-    public Nummerplaat getNummerPlaat() {
+    public Nummerplaat getNummerplaat() {
         if (this.cijfer > 999-1) {
             this.cijfer = 1;
         }

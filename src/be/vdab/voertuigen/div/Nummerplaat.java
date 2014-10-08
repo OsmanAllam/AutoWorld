@@ -39,7 +39,8 @@ public class Nummerplaat implements Serializable, Comparable<Nummerplaat> {
             return false;
         }
         final Nummerplaat other = (Nummerplaat) obj;
-        return Objects.equals(this.plaat, other.plaat);
+
+        return this.plaat.equals(other.plaat);
     }
 
     @Override
