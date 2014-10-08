@@ -14,7 +14,8 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
+//import org.apache.commons.collections4.list.UnmodifiableList;
+import java.util.Collections;
 
 /**
  *
@@ -55,7 +56,7 @@ abstract public class Voertuig implements Serializable, Comparable<Voertuig> {
     public List<Mens> getInzittenden() {
         List<Mens> inzittenden = this._inzittenden;
         inzittenden.add(0, bestuurder);
-        return inzittenden;
+        return Collections.unmodifiableList(inzittenden);
     }
     
     abstract protected boolean checkRijbewijs(Mens bestuurder);
