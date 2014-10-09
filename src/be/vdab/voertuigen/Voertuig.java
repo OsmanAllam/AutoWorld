@@ -17,6 +17,8 @@ import java.util.Arrays;
 import java.util.List;
 //import org.apache.commons.collections4.list.UnmodifiableList;
 import java.util.Collections;
+import java.util.Comparator;
+import org.apache.commons.collections4.ListUtils;
 import static org.apache.commons.lang3.StringUtils.join;
 
 /**
@@ -63,8 +65,16 @@ abstract public class Voertuig implements Serializable, Comparable<Voertuig> {
         
         this._inzittenden = new ArrayList<>();
         this.setBestuurder(bestuurder); // throws MensException
+        
+        /*
+        * The constructor in the only place where we set the driver and the
+        * passengers at the same time. There is the risk that the driver is one
+        * of the passengers. In this case, we must exclude the driver from the
+        * array of passengers. Afterwards, things go as normal.
+        */
         for (Mens mens : inzittenden) {
-            this.addIngezetene(mens);
+            if (!mens.equals(bestuurder)) // <<-- exclude the driver
+                this.addIngezetene(mens);
         }        
         
         // if everything has gone ok so far, we request a license plate
@@ -75,11 +85,11 @@ abstract public class Voertuig implements Serializable, Comparable<Voertuig> {
         }
     }
 
-    public List<Mens> getInzittenden() {
-        List<Mens> inzittenden = this._inzittenden;
-        inzittenden.add(0, bestuurder);
-        return Collections.unmodifiableList(inzittenden);
-    }
+//    public List<Mens> getInzittenden() {
+//        List<Mens> inzittenden = this._inzittenden;
+//        inzittenden.add(0, bestuurder);
+//        return Collections.unmodifiableList(inzittenden);
+//    }
     
     protected boolean checkRijbewijs(Mens bestuurder) {
         for (Rijbewijs rb : this.getToegestaneRijbewijzen()) {
@@ -96,11 +106,31 @@ abstract public class Voertuig implements Serializable, Comparable<Voertuig> {
         if (! checkRijbewijs(bestuurder))
             throw new MensException("Invalid rijbewijs");       
         
-        if (this.bestuurder != null) 
-            this.addIngezetene(bestuurder);
-        this.bestuurder = bestuurder;
+        /*
+        * There are a number of possibilities
+        * [1] A new driver enters the vehicle
+        *   [1.a] There had been a driver before, move him to a passenger seat
+        *   [1.b] otherwise, simple seat the new driver
+        * [2] An existing passenger moves to the driver's seat + old driver 
+        *     moves to a passenger seat
+        */
         
-        return this.getInzittenden().size();
+        if (this.bestuurder != null) {
+            final Mens bestuurder_current = this.bestuurder;
+            int idx = this._inzittenden.indexOf(bestuurder);
+            
+            if (idx > -1) { // [2]
+                this.bestuurder = this._inzittenden.remove(idx);
+            } else { // [1.a]
+                this.bestuurder = bestuurder;
+            }
+            this.addIngezetene(bestuurder_current);
+            
+        } else { // [1.b]
+            this.bestuurder = bestuurder;
+        }
+        
+        return this._inzittenden.size()  +1;
     }
 
     public Nummerplaat getNummerplaat() {
@@ -141,35 +171,51 @@ abstract public class Voertuig implements Serializable, Comparable<Voertuig> {
     
 
     final public boolean addIngezetene(Mens e) throws MensException {
-        if (this._inzittenden.contains(e) || this.bestuurder.equals(e))
+        if (this.isIngezetene(e))
             return false;
         
-        if (this._inzittenden.size() > this.zitplaatsen -1)
+        if (this._inzittenden.size() >= this.zitplaatsen -1)
             throw new MensException("Te veel inzittenden");
         
         return _inzittenden.add(e);
     }
     
-    public boolean isIngezetene(Mens mens) {
-        return this.getInzittenden().contains(mens);
+    public boolean isIngezetene(Mens e) {
+        return (this._inzittenden.contains(e) || this.bestuurder.equals(e));
     }
     
-    public Mens[] getIngezeteneExclusiefBestuurder() {
-        Mens[] z = new Mens[this._inzittenden.size()];
-        this._inzittenden.toArray(z);
+    protected boolean _isIngezetene(Mens e) {
+        return this._inzittenden.contains(e);
+    }
+    
+
+    public List<Mens> getIngezetenen() {
+        List<Mens> z = new ArrayList<>(this._inzittenden.size() +1);
+        
+        z.addAll(this._inzittenden);
+        z.add(this.bestuurder);
+        Collections.sort(z);
         return z;
+    }
+    
+    public List<Mens> getIngezeteneExclusiefBestuurder() {
+        return ListUtils.unmodifiableList(this._inzittenden);
     }
 
     @Override
     public String toString() {
-        return String.format("%s %s %s %d %s [%s]", 
+        String z = String.format("%s %s %s %d %s", 
                 this.nummerplaat.toString(),
                 this.merk,
                 this.datumEersteIngebruikname.toString(),
                 this.aankoopprijs,
-                this.bestuurder.toString(),
-                join(this._inzittenden, ", ")
+                this.bestuurder.toString()
         );
+        if (this._inzittenden.size() > 0) {
+            z += " [" + join(this._inzittenden, ", ") + "]";
+        }
+        
+        return z;
     }
 
     @Override
@@ -199,25 +245,30 @@ abstract public class Voertuig implements Serializable, Comparable<Voertuig> {
     }
 
     // Comparator classes
-    public static Comparable<Voertuig> getMerkComparator() {
-        return Voertuig.new ComparatorMerk();
+    public static Comparator<Voertuig> getMerkComparator() {
+        return new Voertuig.ComparatorMerk();
     }
-    
-    public static Comparable<Voertuig> getAankoopprijsComparator(Voertuig voertuig) {
-        return voertuig.new ComparatorAankoopprijs();
-    }
-    
-    static class ComparatorMerk {
+
+    static class ComparatorMerk implements Comparator<Voertuig> {
+
         @Override
-        public int compareTo(Voertuig o) {
-            return getMerk().compareTo(o.getMerk());
+        public int compare(Voertuig o1, Voertuig o2) {
+            return o1.getMerk().compareTo(o2.getMerk());
         }
+
     }
     
-    class ComparatorAankoopprijs implements Comparable<Voertuig> {
-        @Override
-        public int compareTo(Voertuig o) {
-            return (getAankoopprijs() - o.getAankoopprijs());
-        }
+    public static Comparator<Voertuig> getAankoopprijsComparator() {
+        return new Voertuig.ComparatorAankoopprijs();
     }
+
+    static class ComparatorAankoopprijs implements Comparator<Voertuig> {
+
+        @Override
+        public int compare(Voertuig o1, Voertuig o2) {
+            return o1.getAankoopprijs() - o2.getAankoopprijs();
+        }
+
+    }
+
 }

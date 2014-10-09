@@ -10,5 +10,15 @@ package be.vdab.util;
  * @author osman.allam
  */
 public enum Maat {
+    centimeter(1), decimeter(10), meter(100);
     
+    private final int multiplier;
+    
+    Maat(int multiplier) {
+        this.multiplier = multiplier;
+    }
+
+    public int getMultiplier() {
+        return multiplier;
+    }
 }

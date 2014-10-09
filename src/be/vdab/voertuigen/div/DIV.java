@@ -22,7 +22,7 @@ public class DIV {
     }
     
     public Nummerplaat getNummerplaat() {
-        if (this.cijfer > 999-1) {
+        if (this.cijfer > 999) {
             this.cijfer = 1;
         }
         
